@@ -7,6 +7,8 @@ hist = tickers.history(period="6mo")
 returns = hist["Close"][["TSLA"]].rename(columns={"TSLA": "Close"})
 returns["Open"] = hist["Open"]["TSLA"]
 returns = returns.reset_index()
+
+
 def plot_strategy_returns(cumulative_strategy_returns):
     """
     Plot cumulative strategy returns
@@ -62,7 +64,7 @@ def trade(stock, length):
             money, pos_count, stock.Open[i] * (1 / slippage_adj), stock.Open[i] * slippage_adj
         ]
 
-    res = pd.DataFrame(data=temp_dict).T
+    res = pd.DataFrame(data=temp).T
     res.index.name = 'Date'
     res.index = pd.to_datetime(res.index)
     res.columns = [
@@ -72,7 +74,6 @@ def trade(stock, length):
 
     return res
 
-tickers = yf.Tickers('EUR=X JPY=X GBP=X')
 test_length = 15
 profit = trade(returns, test_length)
 plot_strategy_returns(profit['profit'])
