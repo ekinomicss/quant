@@ -7,27 +7,29 @@ import pandas as pd
 tickers = yf.Tickers('EUR=X JPY=X GBP=X')
 hist = tickers.history(period="6mo")['Close']
 returns = hist.pct_change()
-print(returns)
+
+
 def get_skewness(values):
-    '''
-    Get the skewness for all forex symbols based on its historical data
-    '''
-    # Get the numerator of the skewness
+    """ Get the skewness for all forex symbols based on its historical data """
     numer = ((values - values.mean()) ** 3).sum()
-    # Get the denominator of the skewness
     denom = 15 * values.std() ** 3
-    # Return the skewness
     return (numer/denom).to_dict()
 
-skewness = get_skewness(returns)
-print(skewness)
-window = 21
 
-for day in range(len(returns)-window):
-    cur = skewness[day:day+window]
-    for k,v in skewness.items():
-        if v < 0:
-            
-    shortSymbols = [k for k,v in skewness.items() if v > 0]
+def trading_signal():
+    """ Generate a signal to buy, sell or hold """
+    window = 21
+    positions = {column: [] for column in returns.columns}
 
-print (longSymbols)
+    for day in range(len(returns)-window):
+        cur_skew = get_skewness(returns[day:day+window])
+        for curr, skew in cur_skew.items():
+            if skew < -0.6:
+                positions[curr].append(-1)
+            elif skew > 0.6:
+                positions[curr].append(1)
+            else:
+                positions[curr].append(0)
+
+    return pd.DataFrame(positions)
+
