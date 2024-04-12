@@ -2,7 +2,7 @@
 import yfinance as yf
 import matplotlib.pyplot as plt
 import pandas as pd
-
+from pandas.core.interchange import column
 
 tickers = yf.Tickers('EUR=X JPY=X GBP=X')
 hist = tickers.history(period="6mo")['Close']
@@ -33,3 +33,41 @@ def trading_signal():
 
     return pd.DataFrame(positions)
 
+
+def run_strategy(signal, curr_returns):
+    """ Simulate a strategy on JPY"""
+    temp = {}
+    money = 100.0
+    pos_count = 0
+
+    for i in range(len(signal)):
+        if signal.iloc[i,0] == -1:
+            print("money -1", money, curr_returns.Close[i])
+            money -= curr_returns.Close[i]
+            pos_count -= 1
+        elif signal.iloc[i,0] == 1:
+            print("money 1", money, curr_returns.Close[i])
+            money += curr_returns.Close[i]
+            pos_count += 1
+
+        temp[curr_returns.Date[i]] = [
+                    curr_returns.Close[i], money, pos_count
+                ]
+
+        res = pd.DataFrame(data=temp).T
+        res.index.name = 'Date'
+        res.index = pd.to_datetime(res.index)
+        res.columns = [
+            'Close', 'money', 'pos_count'
+        ]
+        res['profit'] = res.money + (res.Close * res.pos_count)
+
+    return res['profit']
+
+
+trade = trading_signal()[['JPY=X']]
+jpy_rets = returns[['JPY=X']].rename(columns={"JPY=X":"Close"}).reset_index().fillna(0)
+strategy_result = run_strategy(trade,jpy_rets).dropna()
+print(strategy_result)
+
+print("Annualized return is: %.2f%%" % (strategy_result.pct_change().mean() * 12 * 100))
