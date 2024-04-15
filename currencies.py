@@ -1,13 +1,13 @@
-
 import yfinance as yf
 import matplotlib.pyplot as plt
 import pandas as pd
-from pandas.core.interchange import column
+from plot_utils import plot_strategy_returns
+from decimal import Decimal
 
-tickers = yf.Tickers('EUR=X JPY=X GBP=X')
-hist = tickers.history(period="6mo")['Close']
+tickers = yf.Tickers('EUR=X JPY=X GBP=X HKD=X AUD=X '
+                     'EURUSD=X JPYUSD=X GBPUSD=X HKDUSD=X AUDUSD=X')
+hist = tickers.history(period="12mo")['Close']
 returns = hist.pct_change()
-
 
 def get_skewness(values):
     """ Get the skewness for all forex symbols based on its historical data """
@@ -16,7 +16,7 @@ def get_skewness(values):
     return (numer/denom).to_dict()
 
 
-def trading_signal():
+def trading_signal(cutoff=0.6):
     """ Generate a signal to buy, sell or hold """
     window = 21
     positions = {column: [] for column in returns.columns}
@@ -24,9 +24,9 @@ def trading_signal():
     for day in range(len(returns)-window):
         cur_skew = get_skewness(returns[day:day+window])
         for curr, skew in cur_skew.items():
-            if skew < -0.6:
+            if skew < cutoff*-1:
                 positions[curr].append(-1)
-            elif skew > 0.6:
+            elif skew > cutoff:
                 positions[curr].append(1)
             else:
                 positions[curr].append(0)
@@ -37,18 +37,18 @@ def trading_signal():
 def run_strategy(signal, curr_returns):
     """ Simulate a strategy on JPY"""
     temp = {}
-    money = 100.0
+    money = 1000.0
     pos_count = 0
 
     for i in range(len(signal)):
         if signal.iloc[i,0] == -1:
-            print("money -1", money, curr_returns.Close[i])
+            # print("money -1", money, curr_returns.Close[i])
             money -= curr_returns.Close[i]
-            pos_count -= 1
+            pos_count -= 10
         elif signal.iloc[i,0] == 1:
-            print("money 1", money, curr_returns.Close[i])
+            # print("money 1", money, curr_returns.Close[i])
             money += curr_returns.Close[i]
-            pos_count += 1
+            pos_count += 10
 
         temp[curr_returns.Date[i]] = [
                     curr_returns.Close[i], money, pos_count
@@ -64,10 +64,20 @@ def run_strategy(signal, curr_returns):
 
     return res['profit']
 
+def strategy_results(curr):
+    c = Decimal('0.1')
+    step = Decimal('0.1')
+    res = {}
+    while c < 0.9:
+        trade = trading_signal(cutoff=c)[[curr]]
+        curr_rets = returns[[curr]].rename(columns={curr:"Close"}).reset_index().fillna(0)
+        curr_strategy_result = run_strategy(trade,curr_rets).dropna()
+        res[c] = curr_strategy_result
+        print("Annualized return for {} is: {:.2f}%".format(c, curr_strategy_result.pct_change().mean() * 12 * 100))
+        c += step
 
-trade = trading_signal()[['JPY=X']]
-jpy_rets = returns[['JPY=X']].rename(columns={"JPY=X":"Close"}).reset_index().fillna(0)
-strategy_result = run_strategy(trade,jpy_rets).dropna()
-print(strategy_result)
+    return pd.DataFrame(res)
 
-print("Annualized return is: %.2f%%" % (strategy_result.pct_change().mean() * 12 * 100))
+
+plot_strategy_returns(strategy_results("JPY=X"), "JPY Currency Strategy Results")
+
