@@ -34,16 +34,31 @@ def plot_skew(returns):
     plt.show()
 
 
-def calc_summary_stats(returns):
-    """ For a time series of weekly returns, calc various summary statistics """
-    rfr = 0.0462 # Risk-free rate as of 04.15.2024
+def calc_summary_stats(returns, freq='daily'):
+    """Calculate summary statistics for returns."""
+    if freq == 'daily':
+        ann_factor = 252  # Annualization factor for daily returns
+    elif freq == 'weekly':
+        ann_factor = 52  # Annualization factor for weekly returns
+    else:
+        raise ValueError("Invalid frequency. Supported frequencies are 'daily' and 'weekly'.")
+
+    rfr = 0.0462  # Risk-free rate as of 04.15.2024
 
     std = returns.std()
     mu = returns.mean()
-    ann_vol = std * np.sqrt(52)
-    ann_return = mu * 52
-    sharpe = ((mu - rfr) / std) * np.sqrt(52)
-    cum_return = ((1 + returns).cumprod().iloc[-1] / (1 + returns).cumprod().iloc[0]) - 1
+    ann_vol = std * np.sqrt(ann_factor)
+    cum_return = ((1+returns).cumprod().iloc[-1]/ (1+returns).cumprod().iloc[0])-1
+    num_trading_days = len(returns)
+    ann_return = returns.add(1).prod() ** (12 / num_trading_days) - 1
+
+    excess_return = ann_return - rfr
+    sharpe = excess_return / ann_vol
+
+    std = std.apply(lambda x: "{:.2%}".format(x))
+    ann_vol = ann_vol.apply(lambda x: "{:.2%}".format(x))
+    ann_return = ann_return.apply(lambda x: "{:.2%}".format(x))
+    cum_return = cum_return.apply(lambda x: "{:.2%}".format(x))
 
     res = {
         'std': std,
@@ -54,6 +69,3 @@ def calc_summary_stats(returns):
     }
 
     return pd.DataFrame(res)
-
-
-

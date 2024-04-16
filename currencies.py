@@ -2,29 +2,27 @@ import yfinance as yf
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-from utils import plot_strategy_returns, calc_summary_stats, plot_skew
 from decimal import Decimal
 
 
 def get_currencies(ret_type="train"):
     """ Split currency returns to train and test period"""
-    tickers = yf.Tickers('EUR=X JPY=X GBP=X HKD=X AUD=X')
-    hist = tickers.history(period="60mo")['Close']
+    tickers = yf.Tickers('EUR=X JPY=X GBP=X CHF=X AUD=X')
+    hist = tickers.history(period="120mo")['Close']  # Change to 10 years
     returns = hist.pct_change().dropna()
+    returns.columns = returns.columns.str.replace('=X', '/USD')
 
     total_trading_days = len(returns)
-    trading_days_3y = int(total_trading_days * 3 / 5)
-    trading_days_2y = int(total_trading_days * 2 / 5)
+    trading_days_7y = int(total_trading_days * 7 / 10)  # First 7 years
+    trading_days_3y = total_trading_days - trading_days_7y  # Last 3 years
 
     if ret_type == "train":
-        return returns.iloc[:trading_days_3y]
+        return returns.iloc[:trading_days_7y]
     elif ret_type == "test":
-        return returns.iloc[trading_days_3y:trading_days_3y+trading_days_2y]
+        return returns.iloc[-trading_days_3y:]
     elif ret_type == "full":
         return returns
 
-plot_strategy_returns((get_currencies("full")+1).cumprod(),"Cumulative 5Y Return of Currency Basket")
-plot_skew(get_currencies("full"))
 
 def get_skewness(values):
     """ Get the skewness for all forex symbols based on its historical data """
@@ -95,7 +93,6 @@ def simulate_portfolio(signal, curr_returns):
         trade_results = run_strategy(signal[curr], curr_returns[curr], "weekly")
         portfolio = pd.concat([portfolio, trade_results],axis=1)
 
-    print(trade_results)
     portfolio['total'] = portfolio.sum(axis=1)
 
     return portfolio
@@ -117,14 +114,3 @@ def eval_strategy_cutoff(curr):
         c += step
 
     return pd.DataFrame(res)
-
-# print(eval_strategy_cutoff("ekin"))
-#
-# train_rets = get_currencies("train")
-# train_signal = trading_signal(0.6,train_rets)
-# print(simulate_portfolio(train_signal, train_rets))
-# portfolio_rets = simulate_portfolio(train_signal, train_rets)
-
-# plot_strategy_returns(simulate_portfolio(train_signal, train_rets)['total'], "Currency Strategy Results")
-
-print(calc_summary_stats(portfolio_rets.pct_change().dropna()))
