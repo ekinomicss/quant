@@ -61,11 +61,11 @@ def calc_summary_stats(returns, freq='daily'):
     cum_return = cum_return.apply(lambda x: "{:.2%}".format(x))
 
     res = {
-        'std': std,
-        'ann_vol': ann_vol,
-        'ann_return': ann_return,
-        'cum_return': cum_return,
-        'sharpe': sharpe
+        'Std': std,
+        'Ann. Vol': ann_vol,
+        'Ann. Ret': ann_return,
+        'Cum. Ret': cum_return,
+        'Sharpe': sharpe
     }
 
     return pd.DataFrame(res)

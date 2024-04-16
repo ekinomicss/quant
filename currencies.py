@@ -9,7 +9,7 @@ def get_currencies(ret_type="train"):
     """ Split currency returns to train and test period"""
     tickers = yf.Tickers('EUR=X JPY=X GBP=X CHF=X AUD=X')
     hist = tickers.history(period="120mo")['Close']  # Change to 10 years
-    returns = hist.pct_change().dropna()
+    returns = hist
     returns.columns = returns.columns.str.replace('=X', '/USD')
 
     total_trading_days = len(returns)
@@ -62,13 +62,11 @@ def run_strategy(signal, curr_returns, rebal_period):
 
     for i in range(len(signal_w)):
         if signal_w.iloc[i] == -1:
-            # print("money -1", money, curr_returns.Close[i])
             money -= curr_returns_w.iloc[i]
-            pos_count -= 10000
+            pos_count -= 100
         elif signal_w.iloc[i] == 1:
-            # print("money 1", money, curr_returns.Close[i])
             money += curr_returns_w.iloc[i]
-            pos_count += 10000
+            pos_count += 100
 
         temp[curr_returns_w.index[i]] = [
                     curr_returns_w.iloc[i], money, pos_count
@@ -98,13 +96,13 @@ def simulate_portfolio(signal, curr_returns):
     return portfolio
 
 
-def eval_strategy_cutoff(curr):
+def eval_strategy_cutoff():
     c = Decimal('0.1')
     step = Decimal('0.1')
     res = {}
     while c < 0.9:
         train_rets = get_currencies("train")
-        train_signal = trading_signal(c, train_rets)
+        train_signal = trading_signal(c,train_rets)
         curr_strategy_result = simulate_portfolio(train_signal, train_rets)
 
         # Equal weight portfolio
